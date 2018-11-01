@@ -1,0 +1,125 @@
+/*******************************************************************************
+*** Feuille de style pour le démineur                                        ***
+***                                                                          ***
+*** Historique                                                               ***
+***   2012-02-01  NW    Création                                             ***
+*******************************************************************************/
+body {
+   font-size         : 12px;
+   text-align        : center;
+   color: black;
+}
+
+#container {
+   background-color: #ddd;
+   width:  1000px;
+   height: 800px;
+   margin: auto;
+}
+#tools {
+   float: left;
+   width: 150px;
+   height: 800px;
+   border: 1px solid black;
+   border-radius: 5px;
+   margin: 0;
+   line-height: 50px;
+}
+
+#terrain {
+   float: left;
+   position: relative;
+   width: 800px;
+   height: 800px;
+   border: 1px solid black;
+   border-radius: 5px;
+   text-align: center;
+   line-height: 32px;
+   margin: 0;
+}
+
+#overlay {
+   position: absolute;
+   left: 0;
+   top: 0;
+   width:  800px;
+   height: 800px;
+   font-size: 72px;
+   line-height: 800px;
+   color: red;
+   vertical-align: middle;
+}
+
+h1 {
+   color: #000;
+   font-size:        32px;
+}
+
+p {
+   color: black;
+   font-size:        24px;
+   margin:           auto;
+}
+
+
+input[type="button"] {
+   width: 100px;
+   height: 50px;
+}
+
+.v0 { color: #f8f; }
+.v1 { color: #00f; }
+.v2 { color: #0f0; }
+.v3 { color: #f00; }
+.v4 { color: #088; }
+.v5 { color: #880; }
+.v6 { color: #808; }
+.v7 { color: #000; }
+.v8 { color: #888; }
+
+.c000, .c001, .c010, .c011, .c100, .c101, .c110, .c111 {
+   display:          inline-block;
+   margin:           0px;
+   padding:          0px;
+   width:            32px;
+   height:           32px;
+   text-decoration:  none;
+   font-weight:      bold;
+   font-weight:      bold;
+   text-align:       center;
+   background-color: #c8d0ec;
+}
+
+
+.c000 /* empty */ {
+   background-image: url('../img/hidden.png');
+   background-size: 100% 100%;
+}
+
+.c100 /* mine */ {
+   background-image: url('../img/hidden.png');
+   background-size: 100% 100%;
+}
+
+.c001 /* digged */ {
+   font-weight: bold;
+   text-align: center;
+   background-size: 100% 100%;
+}
+
+.c010, .c110 /* flag */ {
+   font-weight: bold;
+   background-image: url('../img/flag.png');
+   background-size: 100% 100%;
+}
+
+.c011 { /* flag digged*/
+   background-image: url('../img/flag.png');
+   background-size: 100% 100%;
+}
+
+.c101 { /* mine digged */
+   background-image: url('../img/mine.png');
+   background-size: 100% 100%;
+   background-color: #f00;
+}

@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<head>
+  <title>Mine sweeper</title>
+  <meta charset="utf-8" >
+  <link rel="stylesheet" type="text/css" href="css/style.css" />
+  <script type="text/javascript" src="js/minesweeper.js"></script>
+</head>
+
+<body onload="startGame();">
+  <div id="container">
+    <div id="tools">
+      <input type="button" value="Play" onclick="startGame(event);" /> <br/>
+      <input type="button" value="dig"  onclick="switchMode(event);"/> <br/>
+      <p id="score">Click to start</p>
+      <br/><br/>
+      <input type="button" value="Full Screen" onclick="switchScreen(event);"/>
+    </div>
+    <div id="terrain"></div>
+  </div>
+</body>
+</html>
