@@ -1,79 +1,10 @@
 /**
  * MineSweeper game, minimalist example
+ * 
+ * Easy :   8 x  8, 10 mines
+ * Medium: 16 x 16, 40 mines
+ * Hard:   24 x 24, 99 mines
  */
-var game = null;
-
-/**
- * Start a new game
- */
-function startGame() {
-  game = new GameClass(20, 20, 50); 
-  game.score   = document.getElementById('score');
-  game.display = document.getElementById('terrain');
-  game.display.innerHTML = game.toString();
-  game.resize();
-}
-
-/**
- * Switch play mode
- */
-function switchMode(event) {
-  if (game) game.swapMode(event);
-}
-
-/** Exit from fullscreen mode
- *  @param el = The element to apply the request (document)
- */
-function cancelFullScreen(el) {
-  // Supports most browsers and their versions.
-  var requestMethod = el.webkitCancelFullScreen || el.mozCancelFullScreen ||
-                el.cancelFullScreen       || el.exitFullscreen;
-  // Call the right method
-  if (requestMethod) {
-    // cancel full screen exist in the browser
-    requestMethod.call(el);
-  }
-  else if (typeof window.ActiveXObject !== "undefined") {
-    // For older IE, simulate F11 key press
-    var wscript = new ActiveXObject("WScript.Shell");
-    if (wscript !== null) { wscript.SendKeys("{F11}"); }
-  }
-}
-
-/** Enter the fullscreen mode
- *  @param el = The element to apply the request (body or other)
- */
-function requestFullScreen(el) {
-  // Supports most browsers and their versions.
-  var requestMethod = el.webkitRequestFullScreen || el.mozRequestFullScreen ||
-                el.requestFullScreen       || el.msRequestFullscreen;
-
-  // Call the right method
-  if (requestMethod) {
-    // Native full screen.
-    requestMethod.call(el);
-  }
-  else if (typeof window.ActiveXObject !== "undefined") {
-    // For older IE, simulate the F11 key press
-    var wscript = new ActiveXObject("WScript.Shell");
-    if (wscript !== null) { wscript.SendKeys("{F11}"); }
-  }
-}
-
-/** Toggle fullscreen mode (on/off)
- */
-function switchScreen(event) {
-  var elem = document.body; // Make the body go full screen.
-  var isInFullScreen = (document.fullScreenElement && document.fullScreenElement !== null) ||
-                (document.mozFullScreen     || document.webkitIsFullScreen);
-  if (isInFullScreen)  { cancelFullScreen(document); }
-  else                 { requestFullScreen(elem);    }
-} 
-
-
-
-
-
 /** @type {Object} Game modes */
 const MODES = {
   dig  : "dig",           // Click on cell will dig the cell
@@ -85,269 +16,270 @@ const MODES = {
 const STATES = {
   idle : "idle",          // Not yet started
   play : "play",          // Game is playing
-  winn : "winn",          // Field cleared
+  win  : "win",           // Field cleared
   dead : "dead"           // Player is dead
 };
 
+
+class Cell {
+  constructor(x, y, html) {
+    this.html   = html
+    this.x      = x;
+    this.y      = y;
+    this.mined  = false;
+    this.flaged = false;
+    this.digged = false;
+    this.count  = 0;
+    this.updateView();
+  }
+
+  /** Updates the html element's class */
+  updateView() {
+    if (this.html) {
+      this.html.className = "cell" + 
+                              " c" + (this.mined  ? '1' : '0') + 
+                                     (this.flaged ? '1' : '0') +
+                                     (this.digged ? '1' : '0') +
+                              " v" + (this.count);
+      this.html.innerHTML = this.digged ? this.count : '&nbsp';
+    }
+  }
+}
+
 /** The main class for minesweeper game */
 class GameClass {
-  /**
-   * Minesweeper game constructor
-   * @param  {Number} width   Width of the play area
-   * @param  {Number} height  Height of the play area
-   * @param  {Number} mines   Number of mines in the game
-   */
   constructor(width, height, mines) {
-    this.field  = this.newField(width,height);   // Mine field as 2D array
-    this.width  = width;                         // Field width
-    this.height = height;                        // Field height
-    this.mines  = mines;                         // Count mines
-    this.flags  = 0;                             // Count flags
-    this.remain = width * height - mines;        // Count cell to uncover
-    this.dummy  = new CellClass(-1,-1);          // Dummy cell
-    this.state  = STATES.idle;                   // Game state                       
-    this.mode   = MODES.dig;                     // Click on cell action
-    this.time   = -1;                            // Game duration
-
     // Output management
-    this.score   = null;                         // Tag to write score
-    this.display = null;                         // Tag to display terrain
+    this.htmlScore = document.getElementById('score');
+    this.htmlTerrain = document.getElementById('terrain');
+    this.htmlOverlay = document.getElementById('overlay');
+
+    // Empty cell (0 mines, not mined, not flagged, not digged)
+    this.emptyCell = new Cell(-1, -1, null);
+
+    // Terrain dimension (given as number of cells)
+    this.width  = width;
+    this.height = height;
+
+    // Number of mines, flags and cell to explore
+    this.mines = mines;
+    this.flags = 0;
+    this.remain = width * height - mines;
+
+    // The game field is an array of cells
+    this.field = this.newField(width, height);
+
+    // Game status, mode and score
+    this.state = STATES.idle;
+    this.mode = MODES.dig;
+    this.time = -1;
 
     // Start "background" task
     setInterval( () => this.updateTime(), 100);
   }
 
-  /**
-   * Create an empty field of the requested dimensions
-   * @param  {Number} width  Field width
-   * @param  {Number} height Field height
-   * @return {Array}         The 2D array with empty cells
-   */
+  /** Create a cell view */
+  newCellView() {
+    let view = document.createElement("span");
+
+    // Events handlers
+    view.addEventListener("click",       (ev) => { this.onLeftClick(ev)  } );
+    view.addEventListener("contextmenu", (ev) => { this.onRightClick(ev) } );
+
+    return view;
+  }
+
+  /** Generate an new game terrain with no mines */
   newField(width, height) {
-    let result = [];
+    let terrain = [];
+    for(let i = 0; i < width * height; i++) {
+      // Create the HTML element for the cell
+      let html = this.newCellView();
 
-    for(let y=0; y<height; y++) {
-      result[y] = [];
-      for(let x=0; x<width; x++) {
-        result[y][x] = new CellClass(x,y);
-      }
+      // link the model and the view
+      html.dataMine = new Cell(i % width, Math.floor(i / width), html);
+
+      // Store the cell model
+      terrain[i] = html.dataMine;
+            
+      // Place the element in the HTML page
+      this.htmlTerrain.appendChild(html);
     }
-    return result;
+    return terrain;
   }
 
-  /**
-   * Timer callback, updates some part of the screen
-   */
-  updateTime() {
-    if (this.state == STATES.play) {
-      if (this.remain === 0) {
-        return this.winnGame();
-      }
-      this.time += 0.1;         
-      this.score.innerHTML = (this.mines-this.flags) +
-                             " / " + this.mines + " " + this.time.toFixed(1);
-    }
+  /** Is the given position in the play field */
+  isInside(x,y) {
+    return ((x >= 0) && (x < this.width) && (y >= 0) && (y < this.height));
   }
 
-  /**
-   * Start the game : Place mines on the field
-   * @param  {number} x Start position which won't be mined  
-   * @param  {number} y Start position which won't be mined  
-   */
-  startGame(x, y) {
-    var x1, y1;
+  /** Get the pointed cell */
+  cellGet(x, y) {
+    if (this.isInside(x,y)) {
+      return this.field[x + y * this.width];
+    }
+    return this.emptyCell;
+  }
 
-    // Place a mine on the start position
-    this.field[y][x].update("mine", true);
+  /** Call a function for each neighbor cells */
+  forEachNeighbor(center, fct) {
+    fct(this.cellGet(center.x - 1, center.y - 1));
+    fct(this.cellGet(center.x,     center.y - 1));
+    fct(this.cellGet(center.x + 1, center.y - 1));
+
+    fct(this.cellGet(center.x - 1, center.y    ));
+    fct(this.cellGet(center.x + 1, center.y    ));
+    
+    fct(this.cellGet(center.x - 1, center.y + 1));
+    fct(this.cellGet(center.x,     center.y + 1));
+    fct(this.cellGet(center.x + 1, center.y + 1));
+  }
+
+  /** Start the game : Place mines on the field (called on first click) */
+  startGame(cell) {
+    // reset game counter
+    this.flags = 0;
+    this.remain = this.width * this.height - this.mines;
+
+    // Place a mine on the start position, to ensure the place will be empty
+    cell.mined = true;
 
     // Place the requested number of mines
     while(this.flags < this.mines) {
-      y1 = Math.floor(Math.random() * this.height);
-      x1 = Math.floor(Math.random() * this.width);
+      let y1 = Math.floor(Math.random() * this.height);
+      let x1 = Math.floor(Math.random() * this.width);
 
-      if (!this.field[y1][x1].mine) {
-        this.field[y1][x1].update("mine", true);
+      if (this.cellGet(x1, y1).mined === false) {
+        this.cellGet(x1, y1).mined = true;
         this.flags += 1;
       }
     }
 
     // Remove the mine from the start position
-    this.field[y][x].update("mine", false);
+    cell.mined = false;
 
-    // update the mine count for each cell
-    for( y1=0; y1<this.height; y1++) {
-      for( x1=0; x1<this.width; x1++) {
-        this.field[y1][x1].update( "count",
-          this.cellGet(x1-1, y1-1).mine + this.cellGet(x1,   y1-1).mine +
-          this.cellGet(x1+1, y1-1).mine + this.cellGet(x1-1, y1  ).mine +
-          this.cellGet(x1+1, y1  ).mine + this.cellGet(x1-1, y1+1).mine +
-          this.cellGet(x1,   y1+1).mine + this.cellGet(x1+1, y1+1).mine
-        );
-      }
-    }
+    // Update the "count" field in all cells
+    this.field.forEach( center => {
+      center.count = 0;
+      this.forEachNeighbor(center, (c2) => {
+        center.count += (c2.mined ? 1 : 0);
+      })
+      center.updateView();
+    });
 
     // Game is now started
     this.state = STATES.play;
+    this.time  = 0;
   }
 
-  /**
-   * Game is finished. You win
-   */
-  winnGame() {
-    this.state = STATES.winn;
-    this.display.innerHTML += '<div id="overlay">Congratulation</div>';
-  }
+  /** Uncover recursively cells */
+  uncover(cell) {
+    if ((this.state !== STATES.play) ||
+        !this.isInside(cell.x, cell.y) || cell.digged || cell.flaged ) {
+      return;
+    }
 
-  /**
-   * Game is finished. You lose
-   */
-  loseGame() {
-    this.state = STATES.winn;
-    this.display.innerHTML += '<div id="overlay">Game over</div>';
-  }
+    // Dig the cell and update the display
+    cell.digged = true;
+    cell.updateView();
 
-  /**
-   * Is the given position in the play field
-   * @param  {Number}  x Cell position
-   * @param  {Number}  y Cell position
-   * @return {Boolean}   true when inside, false otherwise
-   */
-  isInside(x,y) {
-    return !((x<0) || (x>=this.width) ||
-          (y<0) || (y>=this.height) );
-  }
+    // Remove 1 cell from the remaining counter
+    this.remain -= 1;
 
-  /**
-   * Get the cell at a given position
-   * @param  {number} x   The position in the grid
-   * @param  {number} y   The position in the grid
-   * @return {CellClass}  The cell object
-   */
-  cellGet(x,y) {
-    if (this.isInside(x,y)) return this.field[y][x];
-    return this.dummy;
-  }
+    // Detect end of game
+    if (cell.mined) {
+      return this.looser();
+    }
 
-  /**
-   * Uncover recursievely cells
-   * @param  {Number} x Position to uncover
-   * @param  {Number} y Position to uncover
-   */
-  uncover(x, y) {
-    if ( (this.state==STATES.play) && this.isInside(x,y) && !this.field[y][x].digg && !this.field[y][x].flag) {
-      this.field[y][x].update("digg", true);
-      this.remain -= 1;
-
-      // Change state if uncover a mined cell
-      if (this.field[y][x].mine) {
-        return this.loseGame();
-      }
-
-      if (this.field[y][x].count === 0) {
-        this.uncover(x-1, y-1);
-        this.uncover(x,   y-1);
-        this.uncover(x+1, y-1);
-
-        this.uncover(x-1, y  );
-        this.uncover(x+1, y  );
-
-        this.uncover(x-1, y+1);
-        this.uncover(x,   y+1);
-        this.uncover(x+1, y+1);
-      }
+    // Try to uncover cells around if they are not mined
+    if (cell.count === 0) {
+      this.forEachNeighbor( cell, (c2) => { this. uncover(c2); });
     }
   }
 
-  /**
-   * Digg the given cell
-   * @param  {Number}    x    Cell position
-   * @param  {Number}    y    Cell position
-   * @param  {CellClass} cell the cell that was clicked
-   */
-  digCell(x, y, cell) {
-    if (cell.flag === false) {
-      if (cell.digg) {
-        // Cell already digged, dig the 8 cells around
-        this.uncover(x-1, y-1);
-        this.uncover(x,   y-1);
-        this.uncover(x+1, y-1);
-        this.uncover(x-1, y  );
-        this.uncover(x+1, y  );
-        this.uncover(x-1, y+1);
-        this.uncover(x,   y+1);
-        this.uncover(x+1, y+1);
-      }
-      else {
-        // Hidden cell, uncover it
-        this.uncover(x, y);
-      }
+  /** Dig the given cell */
+  digCell(cell) {
+    // Do not dig a flagged cell
+    if (cell.flaged) return;
 
+    if (cell.digged) {
+      // Cell already digged, dig the 8 cells around
+      this.forEachNeighbor( cell, (c2) => { this.uncover(c2); });
+    }
+    else {
+      // Cell is not yet digged, uncover it
+      this.uncover(cell);
     }
   }
 
-  /**
-   * Flag the given cell
-   * @param  {Number}    x    Cell position
-   * @param  {Number}    y    Cell position
-   * @param  {CellClass} cell the cell that was clicked
-   */
-  flagCell(x, y, cell) {
+  /** Flag the given cell */
+  flagCell(cell) {
     // Avoid placing flags on digged cell
-    if (cell.digg) return;
+    if (cell.digged) return;
 
     // Place a flag
-    if (!cell.flag && (this.flags > 0)) {
+    if (!cell.flaged && (this.flags > 0)) {
       this.flags -= 1;
-      cell.update("flag", true);
+      cell.flaged = true;
     }
-    else if (cell.flag) {
+    else if (cell.flaged) {
       this.flags += 1;
-      cell.update("flag", false);
+      cell.flaged = false;
+    }
+
+    cell.updateView();
+  }
+
+  /** Timer callback, updates some part of the screen */
+  updateTime() {
+    if (this.state == STATES.play) {
+      if (this.remain === 0) {
+        return this.winner();
+      }
+      this.time += 0.1;         
+      this.htmlScore.innerHTML = (this.mines-this.flags) +
+                                 " / " + this.mines + " " + this.time.toFixed(1);
     }
   }
 
-  /**
-   * A cell was clicked
-   * @param {Event} event Event description
-   */
-  onClickCell( event ) {
-    var pos  = event.target.id.split("_");          // [1]->x, [2]->y
-    var x    = 1 * pos[1];
-    var y    = 1 * pos[2];
-    var cell = this.field[y][x];
+  /** Game is finished. You win */
+  winner() {
+    this.state = STATES.win;
+    this.htmlOverlay.innerHTML = "<p>Congratulation you are the winner</p>";
+    this.htmlOverlay.style.display = "block";
+  }
+
+  /** Game is finished. You lose */
+  looser() {
+    this.state = STATES.dead;
+    this.htmlOverlay.innerHTML = "<p>Game is over...try again</p>";
+    this.htmlOverlay.style.display = "block";
+  }
+
+  /** A cell was clicked */
+  onLeftClick( event ) {
+    let cell = event.target.dataMine;
 
     if (this.state == STATES.idle) {
-      this.time = 0;
-      this.startGame(x,y);
+      this.startGame(cell);
     }
 
     if (this.mode == MODES.dig ) {
-      this.digCell(x, y, cell);
+      this.digCell(cell);
     }
     else {
-      this.flagCell(x, y, cell);
-    }
+      this.flagCell(cell);
+    }  
   }
 
-  /**
-   * A cell was clicked
-   * @param {Event} event Event description
-   */
+  /** A cell was clicked */
   onRightClick( event ) {
-    var pos  = event.target.id.split("_");          // [1]->x, [2]->y
-    var x    = 1 * pos[1];
-    var y    = 1 * pos[2];
-    var cell = this.field[y][x];
-
-    this.flagCell(x, y, cell);
-
+    var cell = event.target.dataMine;
+    this.flagCell(cell);
     event.preventDefault();
   }
 
-  /**
-   * Change the action mode (dig <-> flag)
-   * @param  {Event} event event description
-   */
+  /** Change the action mode (dig <-> flag) */
   swapMode(event) {
     if (this.state == STATES.play) {
       this.mode = (this.mode == MODES.flag) ? MODES.dig : MODES.flag;
@@ -355,93 +287,17 @@ class GameClass {
     }
   }
 
-  /**
-   * Generate the HTLM representation of the mine field
-   * @return {string} The HTML representation
-   */
-  resize() {
-    var pxW = Math.floor(800 / this.width);
-    var pxH = Math.floor(800 / this.height);
+  /** Hide the overlay div */
+  unlockGame(event) {
+    this.htmlOverlay.style.display = "none";
 
-    for(var y=0; y<this.field.length; y++) {
-      for(var x=0; x<this.field[y].length; x++) {
-        var tag = document.getElementById('_'+x+'_'+y);
-        tag.style.width  = pxW + "px";
-        tag.style.height = pxH + "px";
-      }
-    }
-  }
+    // Remove all children
+    this.htmlTerrain.innerHTML = "";
 
-  /**
-   * Generate the HTLM representation of the mine field
-   * @return {string} The HTML representation
-   */
-  toString() {
-    var tmp = "";
-    for(var y=0; y<this.field.length; y++) {
-      for(var x=0; x<this.field[y].length; x++) {
-        tmp += this.field[y][x].toString();
-      }
-      tmp += '<br>\n';
-    }
-    console.log( tmp);
-    return tmp;
-  }
-}
+    // new terrain
+    this.field = this.newField(this.width, this.height, this.mines);
+    webApp.onResize();
 
-/** The class that defines the content of one game cell */
-class CellClass {
-  /**
-   * Class constructor
-   * @param x, y = cell position
-   */
-  constructor(x, y) {
-    this.tag   = null;      // The HTLM tag
-    this.x     = 1*x;       // Cell position
-    this.y     = 1*y;       // Cell position
-    this.mine  = false;     // Is the cell mined
-    this.flag  = false;     // Is the cell flagged by the user
-    this.digg  = false;     // Is the cell uncovered ?
-    this.count = 0;         // How many mines in the neighborhood
-  }
-
-  /**
-   * Print the cell as a HTML tag
-   * @return string HTML content
-   */
-  toString() {
-    var result = '<span id="_%X_%Y" class="%CLASS" onclick="game.onClickCell(event);" oncontextmenu="game.onRightClick(event);">%COUNT</span>';
-    result = result.replace("%X",     this.x);
-    result = result.replace("%Y",     this.y);
-    result = result.replace("%CLASS", this.getClass());
-    result = result.replace("%COUNT", this.digg ? this.count : '&nbsp;');
-    return result;
-  }
-
-  /**
-   * Return the CSS class for the current cell
-   * @return string The class name
-   */
-  getClass() {
-    return "c" + (this.mine ? '1' : '0') + 
-             (this.flag ? '1' : '0') +
-             (this.digg ? '1' : '0') + " v" + this.count;
-  }
-
-  /**
-   * Update one field and the HTML/CSS representation in the page
-   */
-  update(name, val) {
-    // Update the internal value
-    this[name] = val;
-
-    // find the element in the page
-    if (this.tag === null) {
-      this.tag = document.getElementById('_' + this.x + '_' + this.y);
-    }
-
-    // Update HTML and class in DOM
-    this.tag.className = this.getClass();
-    this.tag.innerHTML = this.digg ? this.count : '&nbsp;'
+    this.state = STATES.idle;
   }
 }

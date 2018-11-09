@@ -1,63 +1,33 @@
-/*******************************************************************************
-*** Feuille de style pour le démineur                                        ***
-***                                                                          ***
-*** Historique                                                               ***
-***   2012-02-01  NW    Création                                             ***
-*******************************************************************************/
+/**
+ * font definition
+ * Source : https://www.dafont.com/3dumb-2dumb.font
+ * Seems to be free for non-commercial use
+ */
+  @font-face {
+    font-family: '3Dumb';
+    src: url('../media/3Dumb.ttf');
+}
+
+
+/**
+ * Other CSS stuff
+ */
+* {
+    margin: 0;
+    padding: 0;
+}
+
 body {
-   font-size         : 12px;
    text-align        : center;
    color: black;
 }
 
-#container {
-   background-color: #ddd;
-   width:  1000px;
-   height: 800px;
-   margin: auto;
-}
-#tools {
-   float: left;
-   width: 150px;
-   height: 800px;
-   border: 1px solid black;
-   border-radius: 5px;
-   margin: 0;
-   line-height: 50px;
-}
-
-#terrain {
-   float: left;
-   position: relative;
-   width: 800px;
-   height: 800px;
-   border: 1px solid black;
-   border-radius: 5px;
-   text-align: center;
-   line-height: 32px;
-   margin: 0;
-}
-
-#overlay {
-   position: absolute;
-   left: 0;
-   top: 0;
-   width:  800px;
-   height: 800px;
-   font-size: 72px;
-   line-height: 800px;
-   color: red;
-   vertical-align: middle;
-}
-
 h1 {
    color: #000;
-   font-size:        32px;
 }
 
 p {
    color: black;
-   font-size:        24px;
    margin:           auto;
 }
 
@@ -77,12 +47,15 @@ input[type="button"] {
 .v7 { color: #000; }
 .v8 { color: #888; }
 
+.cell {
+    width:            32px;
+    height:           32px; 
+}
+
 .c000, .c001, .c010, .c011, .c100, .c101, .c110, .c111 {
    display:          inline-block;
    margin:           0px;
    padding:          0px;
-   width:            32px;
-   height:           32px;
    text-decoration:  none;
    font-weight:      bold;
    font-weight:      bold;
@@ -122,4 +95,84 @@ input[type="button"] {
    background-image: url('../img/mine.png');
    background-size: 100% 100%;
    background-color: #f00;
+}
+
+/* Portrait */
+@media screen and (orientation:portrait) {
+    #container {
+        display: flex;
+        flex-direction: column;
+        background-color: #ddf;
+        width:  1680px;
+        height: 1050px;
+    }
+
+    #tools {
+        display: flex;
+        flex-direction: row;
+        width: 100%;
+        height: 10%;
+        margin: 0;
+        background-color: rgba(128,128,128, 0.5);
+    }
+
+    #terrain, #overlay {
+        /*position: relative;*/
+        width: 100%;
+        height: 89%;
+        text-align: left;
+        margin: auto;
+        padding: 0;
+        background-color: rgba(128,192,128, 0.5);
+    }
+}
+
+
+/* Landscape */
+@media screen and (orientation:landscape) {
+
+    #container {
+        display: flex;
+        flex-direction: row;
+        background-color: #fdd;
+        width:  1050px;
+        height: 1680px;
+        margin: auto;
+    }
+
+    #tools {
+        width: 10%;
+        height: 100%;
+        margin: 0;
+        line-height: 50px;
+        display: flex;
+        flex-direction: column;
+        background-color: rgba(128,128,128, 0.5);
+    }
+
+    #terrain, #overlay{
+        /*position: relative;*/
+        width: 89%;
+        height: 100%;
+        text-align: left;
+        margin: auto;
+        padding: 0;
+        background-color: rgba(128,192,128, 0.5);
+    }
+}
+
+#overlay {
+    position: absolute;
+    background-color: rgba(0,0,0, 0.90);
+    line-height: 150px;
+    vertical-align: middle;
+    text-align: center;
+    font-size: 200%;
+    font-family: '3Dumb';
+    font-weight: bolder;
+    color: white;
+}
+
+#overlay p {
+    color: white;
 }

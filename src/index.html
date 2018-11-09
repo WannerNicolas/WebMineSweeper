@@ -3,19 +3,23 @@
   <title>Mine sweeper</title>
   <meta charset="utf-8" >
   <link rel="stylesheet" type="text/css" href="css/style.css" />
+  <link rel="manifest" href="manifest.json">
   <script type="text/javascript" src="js/minesweeper.js"></script>
+  <script type="text/javascript" src="js/web-app.js"></script>
 </head>
 
-<body onload="startGame();">
+<body>
   <div id="container">
     <div id="tools">
-      <input type="button" value="Play" onclick="startGame(event);" /> <br/>
-      <input type="button" value="dig"  onclick="switchMode(event);"/> <br/>
+      <p> <input type="button" value="Play" id="play" > </p>
+      <p> <input type="button" value="dig"  id="swap"> </p>
       <p id="score">Click to start</p>
-      <br/><br/>
-      <input type="button" value="Full Screen" onclick="switchScreen(event);"/>
+      <p> <input type="button" value="Full Screen" id="toggleFullScreen"/> </p>
     </div>
     <div id="terrain"></div>
+    <div id="overlay">
+      <p>Press "Start" to generate a new terrain</p>
+    </div>
   </div>
 </body>
 </html>
